@@ -1,0 +1,10 @@
+{
+  "name": "shareyoursteps-explorer",
+  "version": "1.0.0",
+  "devDependencies": {
+    "cypress": "^13.6.0"
+  },
+  "scripts": {
+    "test:e2e": "cypress run"
+  }
+}
