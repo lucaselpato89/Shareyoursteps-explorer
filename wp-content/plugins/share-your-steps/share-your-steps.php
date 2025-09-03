@@ -35,7 +35,7 @@ function sys_enqueue_assets() {
         'share-your-steps',
         'shareYourSteps',
         array(
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
+            'api_url' => esc_url_raw( rest_url( 'share-your-steps/v1/' ) ),
         )
     );
 }
@@ -67,28 +67,91 @@ function sys_force_https() {
 }
 add_action( 'template_redirect', 'sys_force_https', 1 );
 
-// AJAX callback with basic anti-spam checks.
-function sys_handle_message_ajax() {
-    if ( ! current_user_can( 'read' ) ) {
-        wp_send_json_error( __( 'Unauthorized', 'share-your-steps' ), 403 );
-    }
+// Register REST API routes.
+function sys_register_rest_routes() {
+    register_rest_route(
+        'share-your-steps/v1',
+        '/save-route',
+        array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => 'sys_save_route',
+            'permission_callback' => function () {
+                return current_user_can( 'read' );
+            },
+        )
+    );
 
-    $message = isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '';
+    register_rest_route(
+        'share-your-steps/v1',
+        '/routes',
+        array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => 'sys_get_routes',
+            'permission_callback' => '__return_true',
+        )
+    );
+
+    register_rest_route(
+        'share-your-steps/v1',
+        '/chat',
+        array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => 'sys_get_chat',
+            'permission_callback' => function () {
+                return current_user_can( 'read' );
+            },
+        )
+    );
+}
+add_action( 'rest_api_init', 'sys_register_rest_routes' );
+
+// Save a user route.
+function sys_save_route( WP_REST_Request $request ) {
+    $route = sanitize_text_field( $request->get_param( 'route' ) );
+
+    return rest_ensure_response( array( 'route' => $route ) );
+}
+
+// Retrieve stored routes.
+function sys_get_routes( WP_REST_Request $request ) {
+    return rest_ensure_response( array( 'routes' => array() ) );
+}
+
+// Handle chat messages with basic anti-spam checks.
+function sys_get_chat( WP_REST_Request $request ) {
+    $message = sanitize_text_field( $request->get_param( 'message' ) );
 
     $max_length = 200;
     $blacklist  = array( 'spam', 'viagra' );
 
     if ( strlen( $message ) > $max_length ) {
-        wp_send_json_error( __( 'Message too long.', 'share-your-steps' ), 400 );
+        return new WP_Error( 'sys_message_too_long', __( 'Message too long.', 'share-your-steps' ), array( 'status' => 400 ) );
     }
 
     foreach ( $blacklist as $word ) {
         if ( false !== stripos( $message, $word ) ) {
-            wp_send_json_error( __( 'Message contains disallowed content.', 'share-your-steps' ), 400 );
+            return new WP_Error( 'sys_message_disallowed', __( 'Message contains disallowed content.', 'share-your-steps' ), array( 'status' => 400 ) );
         }
     }
 
-    wp_send_json_success( array( 'message' => $message ) );
+    return rest_ensure_response( array( 'message' => $message ) );
+}
+
+// AJAX callback for backward compatibility.
+function sys_handle_message_ajax() {
+    if ( ! current_user_can( 'read' ) ) {
+        wp_send_json_error( __( 'Unauthorized', 'share-your-steps' ), 403 );
+    }
+
+    $request = new WP_REST_Request( 'POST', '/chat' );
+    $request->set_param( 'message', isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '' );
+    $response = sys_get_chat( $request );
+
+    if ( is_wp_error( $response ) ) {
+        wp_send_json_error( $response->get_error_message(), $response->get_error_data()['status'] ?? 400 );
+    }
+
+    wp_send_json_success( $response->get_data() );
 }
 add_action( 'wp_ajax_sys_handle_message', 'sys_handle_message_ajax' );
 add_action( 'wp_ajax_nopriv_sys_handle_message', 'sys_handle_message_ajax' );
