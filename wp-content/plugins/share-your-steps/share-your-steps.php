@@ -31,6 +31,13 @@ function sys_enqueue_assets() {
     wp_enqueue_style( 'share-your-steps', plugins_url( 'assets/css/share-your-steps.min.css', __FILE__ ), array(), '1.0.0' );
     wp_enqueue_script( 'share-your-steps', plugins_url( 'assets/js/map.min.js', __FILE__ ), array( 'leaflet' ), '1.0.0', true );
     wp_script_add_data( 'share-your-steps', 'type', 'module' );
+    wp_localize_script(
+        'share-your-steps',
+        'shareYourSteps',
+        array(
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+        )
+    );
 }
 
 add_action( 'wp_enqueue_scripts', 'sys_enqueue_leaflet_assets' );
@@ -49,3 +56,39 @@ function sys_share_your_steps_shortcode( $atts = array() ) {
     return '<div id="' . esc_attr( $map_id ) . '" class="sys-map" data-lat="' . esc_attr( $atts['lat'] ) . '" data-lng="' . esc_attr( $atts['lng'] ) . '" data-zoom="' . esc_attr( $atts['zoom'] ) . '">' . esc_html( __( 'Loading map...', 'share-your-steps' ) ) . '</div>';
 }
 add_shortcode( 'share_your_steps', 'sys_share_your_steps_shortcode' );
+
+// Force HTTPS for all front-end requests.
+function sys_force_https() {
+    if ( ! is_ssl() ) {
+        $location = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        wp_safe_redirect( $location, 301 );
+        exit;
+    }
+}
+add_action( 'template_redirect', 'sys_force_https', 1 );
+
+// AJAX callback with basic anti-spam checks.
+function sys_handle_message_ajax() {
+    if ( ! current_user_can( 'read' ) ) {
+        wp_send_json_error( __( 'Unauthorized', 'share-your-steps' ), 403 );
+    }
+
+    $message = isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '';
+
+    $max_length = 200;
+    $blacklist  = array( 'spam', 'viagra' );
+
+    if ( strlen( $message ) > $max_length ) {
+        wp_send_json_error( __( 'Message too long.', 'share-your-steps' ), 400 );
+    }
+
+    foreach ( $blacklist as $word ) {
+        if ( false !== stripos( $message, $word ) ) {
+            wp_send_json_error( __( 'Message contains disallowed content.', 'share-your-steps' ), 400 );
+        }
+    }
+
+    wp_send_json_success( array( 'message' => $message ) );
+}
+add_action( 'wp_ajax_sys_handle_message', 'sys_handle_message_ajax' );
+add_action( 'wp_ajax_nopriv_sys_handle_message', 'sys_handle_message_ajax' );
