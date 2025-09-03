@@ -6,11 +6,19 @@
  * Author: Share Your Steps Team
  * Requires at least: 6.0
  * Requires PHP: 8.0
+ * Text Domain: share-your-steps
+ * Domain Path: /languages
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
+    wp_die( esc_html( __( 'No direct script access allowed.', 'share-your-steps' ) ) );
 }
+
+// Load plugin text domain.
+function sys_load_textdomain() {
+    load_plugin_textdomain( 'share-your-steps', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+add_action( 'init', 'sys_load_textdomain' );
 
 // Enqueue Leaflet assets from CDN.
 function sys_enqueue_leaflet_assets() {
@@ -38,6 +46,6 @@ function sys_share_your_steps_shortcode( $atts = array() ) {
 
     $map_id = 'sys-map-' . wp_rand();
 
-    return '<div id="' . esc_attr( $map_id ) . '" class="sys-map" data-lat="' . esc_attr( $atts['lat'] ) . '" data-lng="' . esc_attr( $atts['lng'] ) . '" data-zoom="' . esc_attr( $atts['zoom'] ) . '"></div>';
+    return '<div id="' . esc_attr( $map_id ) . '" class="sys-map" data-lat="' . esc_attr( $atts['lat'] ) . '" data-lng="' . esc_attr( $atts['lng'] ) . '" data-zoom="' . esc_attr( $atts['zoom'] ) . '">' . esc_html( __( 'Loading map...', 'share-your-steps' ) ) . '</div>';
 }
 add_shortcode( 'share_your_steps', 'sys_share_your_steps_shortcode' );
