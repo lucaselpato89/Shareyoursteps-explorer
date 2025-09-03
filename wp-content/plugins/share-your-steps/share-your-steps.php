@@ -36,6 +36,8 @@ function sys_enqueue_assets() {
         'shareYourSteps',
         array(
             'api_url' => esc_url_raw( rest_url( 'share-your-steps/v1/' ) ),
+            // Configure the WebSocket endpoint (e.g. Pusher, Socket.io, Ratchet).
+            'websocket_url' => esc_url_raw( 'ws://localhost:8080' ),
         )
     );
 }
