@@ -1,0 +1,11 @@
+{
+    "name": "shareyoursteps/explorer",
+    "type": "project",
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "wp-phpunit/wp-phpunit": "^6.5"
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit"
+    }
+}

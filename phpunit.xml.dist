@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="wp-content/plugins/share-your-steps/tests/bootstrap.php"
+         colors="true"
+         backupGlobals="false">
+    <testsuites>
+        <testsuite name="Share Your Steps Test Suite">
+            <directory>wp-content/plugins/share-your-steps/tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
