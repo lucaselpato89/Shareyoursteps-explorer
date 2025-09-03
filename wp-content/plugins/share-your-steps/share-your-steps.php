@@ -17,7 +17,16 @@ function sys_enqueue_leaflet_assets() {
     wp_enqueue_style( 'leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', array(), '1.9.4' );
     wp_enqueue_script( 'leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', array(), '1.9.4', true );
 }
+
+// Enqueue plugin assets.
+function sys_enqueue_assets() {
+    wp_enqueue_style( 'share-your-steps', plugins_url( 'assets/css/share-your-steps.min.css', __FILE__ ), array(), '1.0.0' );
+    wp_enqueue_script( 'share-your-steps', plugins_url( 'assets/js/map.min.js', __FILE__ ), array( 'leaflet' ), '1.0.0', true );
+    wp_script_add_data( 'share-your-steps', 'type', 'module' );
+}
+
 add_action( 'wp_enqueue_scripts', 'sys_enqueue_leaflet_assets' );
+add_action( 'wp_enqueue_scripts', 'sys_enqueue_assets' );
 
 // Shortcode to render map
 function sys_share_your_steps_shortcode( $atts = array() ) {
@@ -29,19 +38,6 @@ function sys_share_your_steps_shortcode( $atts = array() ) {
 
     $map_id = 'sys-map-' . wp_rand();
 
-    ob_start();
-    ?>
-    <div id="<?php echo esc_attr( $map_id ); ?>" style="width:100%;height:400px;"></div>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var map = L.map('<?php echo esc_js( $map_id ); ?>').setView([<?php echo esc_js( $atts['lat'] ); ?>, <?php echo esc_js( $atts['lng'] ); ?>], <?php echo esc_js( $atts['zoom'] ); ?>);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-    });
-    </script>
-    <?php
-    return ob_get_clean();
+    return '<div id="' . esc_attr( $map_id ) . '" class="sys-map" data-lat="' . esc_attr( $atts['lat'] ) . '" data-lng="' . esc_attr( $atts['lng'] ) . '" data-zoom="' . esc_attr( $atts['zoom'] ) . '"></div>';
 }
 add_shortcode( 'share_your_steps', 'sys_share_your_steps_shortcode' );
