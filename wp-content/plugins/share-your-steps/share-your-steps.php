@@ -104,6 +104,30 @@ function sys_register_rest_routes() {
             },
         )
     );
+
+    register_rest_route(
+        'share-your-steps/v1',
+        '/live-route',
+        array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => 'sys_save_live_route',
+            'permission_callback' => function () {
+                return current_user_can( 'read' );
+            },
+        )
+    );
+
+    register_rest_route(
+        'share-your-steps/v1',
+        '/finalize-route',
+        array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => 'sys_finalize_route',
+            'permission_callback' => function () {
+                return current_user_can( 'read' );
+            },
+        )
+    );
 }
 add_action( 'rest_api_init', 'sys_register_rest_routes' );
 
@@ -117,6 +141,102 @@ function sys_save_route( WP_REST_Request $request ) {
 // Retrieve stored routes.
 function sys_get_routes( WP_REST_Request $request ) {
     return rest_ensure_response( array( 'routes' => array() ) );
+}
+
+// Schedule event to store live coordinates.
+function sys_save_live_route( WP_REST_Request $request ) {
+    $post_id = absint( $request->get_param( 'post_id' ) );
+    $coords  = $request->get_param( 'coords' );
+
+    if ( ! $post_id || empty( $coords ) || ! is_array( $coords ) ) {
+        return new WP_Error( 'sys_invalid_data', __( 'Invalid data.', 'share-your-steps' ), array( 'status' => 400 ) );
+    }
+
+    wp_schedule_single_event( time(), 'sys_store_live_coordinates', array( $post_id, $coords ) );
+
+    return rest_ensure_response( array( 'status' => 'scheduled' ) );
+}
+add_action( 'sys_store_live_coordinates', 'sys_store_live_coordinates', 10, 2 );
+
+/**
+ * Store live coordinates in post meta.
+ *
+ * @param int   $post_id Post ID.
+ * @param array $coords  Coordinates array.
+ */
+function sys_store_live_coordinates( $post_id, $coords ) {
+    if ( ! $post_id || ! is_array( $coords ) ) {
+        return;
+    }
+
+    $stored = get_post_meta( $post_id, '_sys_live_coords', true );
+    if ( ! is_array( $stored ) ) {
+        $stored = array();
+    }
+
+    $stored[] = array(
+        'lat'  => isset( $coords['lat'] ) ? (float) $coords['lat'] : 0,
+        'lng'  => isset( $coords['lng'] ) ? (float) $coords['lng'] : 0,
+        'time' => time(),
+    );
+
+    update_post_meta( $post_id, '_sys_live_coords', $stored );
+    update_post_meta( $post_id, '_sys_live_coords_updated', time() );
+}
+
+// Convert live route to final route.
+function sys_finalize_route( WP_REST_Request $request ) {
+    $post_id = absint( $request->get_param( 'post_id' ) );
+
+    if ( ! $post_id ) {
+        return new WP_Error( 'sys_invalid_post', __( 'Invalid post ID.', 'share-your-steps' ), array( 'status' => 400 ) );
+    }
+
+    $coords = get_post_meta( $post_id, '_sys_live_coords', true );
+
+    if ( empty( $coords ) ) {
+        return new WP_Error( 'sys_no_route', __( 'No live route found.', 'share-your-steps' ), array( 'status' => 404 ) );
+    }
+
+    update_post_meta( $post_id, '_sys_final_route', $coords );
+    delete_post_meta( $post_id, '_sys_live_coords' );
+    delete_post_meta( $post_id, '_sys_live_coords_updated' );
+
+    return rest_ensure_response( array( 'status' => 'finalized', 'route' => $coords ) );
+}
+
+// Schedule daily cleanup of stale live routes.
+function sys_schedule_live_route_cleanup() {
+    if ( ! wp_next_scheduled( 'sys_cleanup_live_routes' ) ) {
+        wp_schedule_event( time(), 'daily', 'sys_cleanup_live_routes' );
+    }
+}
+add_action( 'init', 'sys_schedule_live_route_cleanup' );
+add_action( 'sys_cleanup_live_routes', 'sys_cleanup_old_live_routes' );
+
+// Remove live routes older than a week.
+function sys_cleanup_old_live_routes() {
+    $args  = array(
+        'post_type'      => 'any',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => array(
+            array(
+                'key'     => '_sys_live_coords_updated',
+                'value'   => time() - WEEK_IN_SECONDS,
+                'compare' => '<',
+                'type'    => 'NUMERIC',
+            ),
+        ),
+    );
+
+    $query = new WP_Query( $args );
+
+    foreach ( $query->posts as $post_id ) {
+        delete_post_meta( $post_id, '_sys_live_coords' );
+        delete_post_meta( $post_id, '_sys_live_coords_updated' );
+    }
 }
 
 // Handle chat messages with basic anti-spam checks.
