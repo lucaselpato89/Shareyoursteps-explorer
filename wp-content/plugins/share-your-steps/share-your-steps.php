@@ -82,7 +82,7 @@ add_shortcode( 'share_your_steps', 'sys_share_your_steps_shortcode' );
 add_action(
     'admin_menu',
     function () {
-        add_options_page(
+        add_menu_page(
             __( 'Share Your Steps', 'share-your-steps' ),
             __( 'Share Your Steps', 'share-your-steps' ),
             'manage_options',
