@@ -69,6 +69,25 @@ function sys_force_https() {
 }
 add_action( 'template_redirect', 'sys_force_https', 1 );
 
+// Register custom post type for routes.
+function sys_register_route_post_type() {
+    register_post_type(
+        'sys_route',
+        array(
+            'labels' => array(
+                'name'          => __( 'Routes', 'share-your-steps' ),
+                'singular_name' => __( 'Route', 'share-your-steps' ),
+            ),
+            'public'       => false,
+            'show_ui'      => false,
+            'supports'     => array( 'title' ),
+            'capability_type' => 'sys_route',
+            'map_meta_cap'    => true,
+        )
+    );
+}
+add_action( 'init', 'sys_register_route_post_type' );
+
 // Register REST API routes.
 function sys_register_rest_routes() {
     register_rest_route(
@@ -89,7 +108,9 @@ function sys_register_rest_routes() {
         array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => 'sys_get_routes',
-            'permission_callback' => '__return_true',
+            'permission_callback' => function () {
+                return current_user_can( 'read' );
+            },
         )
     );
 
@@ -133,14 +154,65 @@ add_action( 'rest_api_init', 'sys_register_rest_routes' );
 
 // Save a user route.
 function sys_save_route( WP_REST_Request $request ) {
-    $route = sanitize_text_field( $request->get_param( 'route' ) );
+    $route_raw = $request->get_param( 'route' );
 
-    return rest_ensure_response( array( 'route' => $route ) );
+    if ( empty( $route_raw ) ) {
+        return new WP_Error( 'sys_invalid_route', __( 'No route data provided.', 'share-your-steps' ), array( 'status' => 400 ) );
+    }
+
+    $route_data = json_decode( wp_unslash( $route_raw ), true );
+    if ( null === $route_data || JSON_ERROR_NONE !== json_last_error() ) {
+        return new WP_Error( 'sys_invalid_route', __( 'Invalid route JSON.', 'share-your-steps' ), array( 'status' => 400 ) );
+    }
+
+    $post_id = wp_insert_post(
+        array(
+            'post_type'   => 'sys_route',
+            'post_status' => 'publish',
+            'post_title'  => 'Route ' . current_time( 'mysql' ),
+            'post_author' => get_current_user_id(),
+        ),
+        true
+    );
+
+    if ( is_wp_error( $post_id ) ) {
+        return $post_id;
+    }
+
+    update_post_meta( $post_id, '_sys_route_data', wp_json_encode( $route_data ) );
+
+    return rest_ensure_response( array( 'id' => $post_id, 'route' => $route_data ) );
 }
 
 // Retrieve stored routes.
 function sys_get_routes( WP_REST_Request $request ) {
-    return rest_ensure_response( array( 'routes' => array() ) );
+    $args = array(
+        'post_type'      => 'sys_route',
+        'post_status'    => 'publish',
+        'author'         => get_current_user_id(),
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+    );
+
+    $query  = new WP_Query( $args );
+    $routes = array();
+
+    foreach ( $query->posts as $post_id ) {
+        $route = get_post_meta( $post_id, '_sys_route_data', true );
+        if ( empty( $route ) ) {
+            continue;
+        }
+
+        $decoded = json_decode( $route, true );
+        if ( JSON_ERROR_NONE === json_last_error() ) {
+            $routes[] = array(
+                'id'    => $post_id,
+                'route' => $decoded,
+            );
+        }
+    }
+
+    return rest_ensure_response( array( 'routes' => $routes ) );
 }
 
 // Schedule event to store live coordinates.
