@@ -28,32 +28,48 @@ function sys_haversine_km( float $lat1, float $lon1, float $lat2, float $lon2 ):
 }
 
 /**
- * Simple in-memory rate limiter.
+ * Rate limiter leveraging WordPress transients.
+ *
+ * Uses the current user's ID if available or falls back to the request IP
+ * address to create a unique transient key. Expired keys are removed based on
+ * the provided interval.
  *
  * @param string $key      Identifier for the action being rate limited.
  * @param int    $limit    Maximum number of allowed calls within the interval.
  * @param int    $interval Interval window in seconds.
- * @return bool  True if allowed, false if rate limited.
+ *
+ * @return bool True if allowed, false if rate limited.
  */
 function sys_rate_limiter( string $key, int $limit = 5, int $interval = 60 ): bool {
-    static $requests = [];
-    $now = time();
+    $user_id   = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
+    $ip        = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $identity  = $user_id > 0 ? 'user_' . $user_id : 'ip_' . $ip;
+    $transient = 'sys_rate_' . $key . '_' . $identity;
+    $now       = time();
 
-    if ( ! isset( $requests[ $key ] ) ) {
-        $requests[ $key ] = [];
+    $timestamps = get_transient( $transient );
+    if ( ! is_array( $timestamps ) ) {
+        $timestamps = [];
     }
 
     // Remove timestamps outside the interval window.
-    $requests[ $key ] = array_filter(
-        $requests[ $key ],
-        fn( $timestamp ) => ( $now - $timestamp ) < $interval
+    $timestamps = array_filter(
+        $timestamps,
+        static fn( $timestamp ) => ( $now - $timestamp ) < $interval
     );
 
-    if ( count( $requests[ $key ] ) >= $limit ) {
+    if ( empty( $timestamps ) ) {
+        delete_transient( $transient );
+    }
+
+    if ( count( $timestamps ) >= $limit ) {
+        // Persist the filtered list for subsequent calls.
+        set_transient( $transient, $timestamps, $interval );
         return false;
     }
 
-    $requests[ $key ][] = $now;
+    $timestamps[] = $now;
+    set_transient( $transient, $timestamps, $interval );
     return true;
 }
 
