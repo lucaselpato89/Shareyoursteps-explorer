@@ -48,7 +48,9 @@ function sys_enqueue_assets() {
             'api_url' => esc_url_raw( rest_url( 'share-your-steps/v1/' ) ),
             // Configure the WebSocket endpoint (e.g. Pusher, Socket.io, Ratchet).
             'websocket_url' => esc_url_raw( get_option( 'sys_websocket_url', 'ws://localhost:8080' ) ),
-            'nonce' => wp_create_nonce( 'wp_rest' ),
+            'nonce'      => wp_create_nonce( 'wp_rest' ),
+            'chat_nonce' => wp_create_nonce( 'sys_chat' ),
+            'ajax_url'   => admin_url( 'admin-ajax.php' ),
         )
     );
 }
@@ -417,6 +419,8 @@ function sys_handle_message_ajax() {
     if ( ! current_user_can( 'read' ) ) {
         wp_send_json_error( __( 'Unauthorized', 'share-your-steps' ), 403 );
     }
+
+    check_ajax_referer( 'sys_chat', 'nonce' );
 
     $request = new WP_REST_Request( 'POST', '/chat' );
     $request->set_param( 'message', isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '' );
