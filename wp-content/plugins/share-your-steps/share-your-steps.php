@@ -14,6 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
     wp_die( esc_html( __( 'No direct script access allowed.', 'share-your-steps' ) ) );
 }
 
+require_once __DIR__ . '/includes/utils.php';
+
 // Register default options on activation.
 if ( function_exists( 'register_activation_hook' ) ) {
     register_activation_hook(
