@@ -61,6 +61,21 @@ add_shortcode( 'share_your_steps', 'sys_share_your_steps_shortcode' );
 
 // Force HTTPS for all front-end requests.
 function sys_force_https() {
+    if ( is_admin() || ! wp_is_https_supported() ) {
+        return;
+    }
+
+    /**
+     * Filter whether Share Your Steps should force a redirect to HTTPS.
+     *
+     * @since 1.0.0
+     *
+     * @param bool $enabled Whether the redirect is enabled. Default true.
+     */
+    if ( false === apply_filters( 'sys_force_https_enabled', true ) ) {
+        return;
+    }
+
     if ( ! is_ssl() ) {
         $location = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
         wp_safe_redirect( $location, 301 );
