@@ -32,3 +32,10 @@ I file `*.min.js` verranno generati nella cartella `wp-content/plugins/share-you
 ```php
 add_filter( 'sys_force_https_enabled', '__return_false' );
 ```
+
+## Proxy
+
+Quando il sito è dietro un proxy o un bilanciatore di carico, il plugin utilizza le intestazioni
+`HTTP_X_FORWARDED_FOR` e `HTTP_CLIENT_IP` per determinare l'indirizzo IP del client ai fini del
+rate limiting. Assicurarsi che il proxy inoltri correttamente tali intestazioni.
+

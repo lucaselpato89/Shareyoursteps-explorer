@@ -28,6 +28,44 @@ function sys_haversine_km( float $lat1, float $lon1, float $lat2, float $lon2 ):
 }
 
 /**
+ * Retrieve the client IP address considering common proxy headers.
+ *
+ * Checks `HTTP_X_FORWARDED_FOR` and `HTTP_CLIENT_IP` before falling back
+ * to `REMOTE_ADDR`. Each value is validated using `filter_var` to ensure
+ * it contains a valid IP address. When multiple IPs are present in
+ * `HTTP_X_FORWARDED_FOR`, the first valid entry is used.
+ *
+ * @return string Client IP address or 'unknown' if none is found.
+ */
+function sys_get_client_ip(): string {
+    $candidates = [ 'HTTP_X_FORWARDED_FOR', 'HTTP_CLIENT_IP', 'REMOTE_ADDR' ];
+
+    foreach ( $candidates as $key ) {
+        if ( empty( $_SERVER[ $key ] ) ) {
+            continue;
+        }
+
+        $value = $_SERVER[ $key ];
+
+        if ( 'HTTP_X_FORWARDED_FOR' === $key ) {
+            $parts = explode( ',', $value );
+            foreach ( $parts as $part ) {
+                $ip = trim( $part );
+                if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+                    return $ip;
+                }
+            }
+        } else {
+            if ( filter_var( $value, FILTER_VALIDATE_IP ) ) {
+                return $value;
+            }
+        }
+    }
+
+    return 'unknown';
+}
+
+/**
  * Rate limiter leveraging WordPress transients.
  *
  * Uses the current user's ID if available or falls back to the request IP
@@ -42,7 +80,7 @@ function sys_haversine_km( float $lat1, float $lon1, float $lat2, float $lon2 ):
  */
 function sys_rate_limiter( string $key, int $limit = 5, int $interval = 60 ): bool {
     $user_id   = function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0;
-    $ip        = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $ip        = sys_get_client_ip();
     $identity  = $user_id > 0 ? 'user_' . $user_id : 'ip_' . $ip;
     $transient = 'sys_rate_' . $key . '_' . $identity;
     $now       = time();
