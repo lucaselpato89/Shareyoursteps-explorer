@@ -3,10 +3,10 @@ use PHPUnit\Framework\TestCase;
 
 class RestApiTest extends TestCase {
     protected function setUp(): void {
-        global $sys_wp_insert_post_return, $sys_post_meta, $sys_wp_query_posts;
+        global $sys_wp_insert_post_return, $sys_post_meta, $sys_wp_posts;
         $sys_wp_insert_post_return = 1;
         $sys_post_meta = [];
-        $sys_wp_query_posts = [];
+        $sys_wp_posts = [];
     }
 
     public function test_sys_save_route_success() {
@@ -45,8 +45,12 @@ class RestApiTest extends TestCase {
     }
 
     public function test_sys_get_routes_returns_valid_routes_only() {
-        global $sys_wp_query_posts, $sys_post_meta;
-        $sys_wp_query_posts = [ 1, 2, 3 ];
+        global $sys_wp_posts, $sys_post_meta;
+        $sys_wp_posts = [
+            1 => 'sys_route',
+            2 => 'sys_route',
+            3 => 'sys_route',
+        ];
         $sys_post_meta[1]['_sys_route_data'] = json_encode( [ 'a' => 1 ] );
         $sys_post_meta[2]['_sys_route_data'] = 'invalid';
         $sys_post_meta[3]['_sys_route_data'] = json_encode( [ 'b' => 2 ] );
@@ -98,5 +102,35 @@ class RestApiTest extends TestCase {
             $this->assertTrue( $callback() );
             $this->assertSame( $cap, $sys_current_user_cap );
         }
+    }
+
+    public function test_sys_cleanup_old_live_routes_only_cleans_sys_route_posts() {
+        global $sys_wp_posts, $sys_post_meta;
+
+        $now = time();
+
+        $sys_wp_posts = [
+            1 => 'sys_route',
+            2 => 'post',
+            3 => 'sys_route',
+        ];
+
+        $sys_post_meta[1]['_sys_live_coords']          = 'data1';
+        $sys_post_meta[1]['_sys_live_coords_updated']  = $now - WEEK_IN_SECONDS - 10;
+        $sys_post_meta[2]['_sys_live_coords']          = 'data2';
+        $sys_post_meta[2]['_sys_live_coords_updated']  = $now - WEEK_IN_SECONDS - 10;
+        $sys_post_meta[3]['_sys_live_coords']          = 'data3';
+        $sys_post_meta[3]['_sys_live_coords_updated']  = $now - WEEK_IN_SECONDS + 10;
+
+        sys_cleanup_old_live_routes();
+
+        $this->assertArrayNotHasKey( '_sys_live_coords', $sys_post_meta[1] );
+        $this->assertArrayNotHasKey( '_sys_live_coords_updated', $sys_post_meta[1] );
+
+        $this->assertArrayHasKey( '_sys_live_coords', $sys_post_meta[2] );
+        $this->assertArrayHasKey( '_sys_live_coords_updated', $sys_post_meta[2] );
+
+        $this->assertArrayHasKey( '_sys_live_coords', $sys_post_meta[3] );
+        $this->assertArrayHasKey( '_sys_live_coords_updated', $sys_post_meta[3] );
     }
 }

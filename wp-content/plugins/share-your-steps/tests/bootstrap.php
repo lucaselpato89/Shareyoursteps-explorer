@@ -120,11 +120,15 @@ function wp_unslash( $value ) { return $value; }
 function wp_json_encode( $data ) { return json_encode( $data ); }
 function current_time( $type ) { return '2020-01-01 00:00:00'; }
 
+if ( ! defined( 'WEEK_IN_SECONDS' ) ) {
+    define( 'WEEK_IN_SECONDS', 7 * 24 * 60 * 60 );
+}
+
 // Storage for mock posts and metadata.
-global $sys_wp_insert_post_return, $sys_post_meta, $sys_wp_query_posts;
+global $sys_wp_insert_post_return, $sys_post_meta, $sys_wp_posts;
 $sys_wp_insert_post_return = 1;
 $sys_post_meta            = [];
-$sys_wp_query_posts       = [];
+$sys_wp_posts             = [];
 
 function wp_insert_post( $data, $wp_error = false ) {
     global $sys_wp_insert_post_return;
@@ -142,11 +146,68 @@ function get_post_meta( $post_id, $key, $single = false ) {
     return $sys_post_meta[ $post_id ][ $key ] ?? '';
 }
 
+function delete_post_meta( $post_id, $key ) {
+    global $sys_post_meta;
+    unset( $sys_post_meta[ $post_id ][ $key ] );
+    return true;
+}
+
 class WP_Query {
     public $posts;
     public function __construct( $args ) {
-        global $sys_wp_query_posts;
-        $this->posts = $sys_wp_query_posts;
+        global $sys_wp_posts, $sys_post_meta;
+
+        $post_type = $args['post_type'] ?? 'any';
+        $per_page  = $args['posts_per_page'] ?? -1;
+        $paged     = $args['paged'] ?? 1;
+        $meta_query = $args['meta_query'] ?? [];
+
+        $filtered = [];
+        foreach ( $sys_wp_posts as $id => $type ) {
+            if ( 'any' !== $post_type && $type !== $post_type ) {
+                continue;
+            }
+
+            $include = true;
+            foreach ( $meta_query as $mq ) {
+                $meta_val = $sys_post_meta[ $id ][ $mq['key'] ] ?? null;
+                $compare  = $mq['compare'] ?? '=';
+                $target   = $mq['value'];
+
+                switch ( $compare ) {
+                    case '<':
+                        if ( ! ( $meta_val < $target ) ) {
+                            $include = false;
+                        }
+                        break;
+                    case '>':
+                        if ( ! ( $meta_val > $target ) ) {
+                            $include = false;
+                        }
+                        break;
+                    default:
+                        if ( $meta_val != $target ) {
+                            $include = false;
+                        }
+                        break;
+                }
+
+                if ( ! $include ) {
+                    break;
+                }
+            }
+
+            if ( $include ) {
+                $filtered[] = $id;
+            }
+        }
+
+        if ( $per_page > 0 ) {
+            $offset   = ( $paged - 1 ) * $per_page;
+            $filtered = array_slice( $filtered, $offset, $per_page );
+        }
+
+        $this->posts = $filtered;
     }
 }
 

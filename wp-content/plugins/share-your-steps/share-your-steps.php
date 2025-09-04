@@ -371,27 +371,34 @@ add_action( 'sys_cleanup_live_routes', 'sys_cleanup_old_live_routes' );
 
 // Remove live routes older than a week.
 function sys_cleanup_old_live_routes() {
-    $args  = array(
-        'post_type'      => 'any',
-        'post_status'    => 'any',
-        'posts_per_page' => -1,
-        'fields'         => 'ids',
-        'meta_query'     => array(
-            array(
-                'key'     => '_sys_live_coords_updated',
-                'value'   => time() - WEEK_IN_SECONDS,
-                'compare' => '<',
-                'type'    => 'NUMERIC',
+    $paged = 1;
+
+    do {
+        $args  = array(
+            'post_type'      => 'sys_route',
+            'post_status'    => 'any',
+            'posts_per_page' => 100,
+            'paged'          => $paged,
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_sys_live_coords_updated',
+                    'value'   => time() - WEEK_IN_SECONDS,
+                    'compare' => '<',
+                    'type'    => 'NUMERIC',
+                ),
             ),
-        ),
-    );
+        );
 
-    $query = new WP_Query( $args );
+        $query = new WP_Query( $args );
 
-    foreach ( $query->posts as $post_id ) {
-        delete_post_meta( $post_id, '_sys_live_coords' );
-        delete_post_meta( $post_id, '_sys_live_coords_updated' );
-    }
+        foreach ( $query->posts as $post_id ) {
+            delete_post_meta( $post_id, '_sys_live_coords' );
+            delete_post_meta( $post_id, '_sys_live_coords_updated' );
+        }
+
+        $paged++;
+    } while ( ! empty( $query->posts ) );
 }
 
 // Handle chat messages with basic anti-spam checks.
