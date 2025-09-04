@@ -6,6 +6,6 @@
         "wp-phpunit/wp-phpunit": "^6.5"
     },
     "scripts": {
-        "test": "vendor/bin/phpunit"
+        "test": "vendor/bin/phpunit -c phpunit.xml.dist"
     }
 }
