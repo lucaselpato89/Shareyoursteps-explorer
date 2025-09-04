@@ -39,8 +39,14 @@ function sys_enqueue_leaflet_assets() {
 // Enqueue plugin assets.
 function sys_enqueue_assets() {
     wp_enqueue_style( 'share-your-steps', plugins_url( 'assets/css/share-your-steps.min.css', __FILE__ ), array(), '1.0.0' );
-    wp_enqueue_script( 'share-your-steps', plugins_url( 'assets/js/map.min.js', __FILE__ ), array( 'leaflet' ), '1.0.0', true );
-    wp_script_add_data( 'share-your-steps', 'type', 'module' );
+    wp_register_script(
+        'share-your-steps',
+        plugins_url( 'assets/js/map.min.js', __FILE__ ),
+        array( 'leaflet' ),
+        '1.0.0',
+        array( 'in_footer' => true, 'type' => 'module' )
+    );
+    wp_enqueue_script( 'share-your-steps' );
     wp_localize_script(
         'share-your-steps',
         'shareYourSteps',
