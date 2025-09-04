@@ -154,6 +154,9 @@ function delete_post_meta( $post_id, $key ) {
 
 class WP_Query {
     public $posts;
+    public $found_posts;
+    public $max_num_pages;
+
     public function __construct( $args ) {
         global $sys_wp_posts, $sys_post_meta;
 
@@ -201,6 +204,9 @@ class WP_Query {
                 $filtered[] = $id;
             }
         }
+
+        $this->found_posts   = count( $filtered );
+        $this->max_num_pages = $per_page > 0 ? (int) ceil( $this->found_posts / $per_page ) : 1;
 
         if ( $per_page > 0 ) {
             $offset   = ( $paged - 1 ) * $per_page;

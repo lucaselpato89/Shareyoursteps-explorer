@@ -1,12 +1,23 @@
 const wsUrl = window?.shareYourSteps?.websocket_url;
 let socket;
 
+function fetchAllRoutes(page = 1, acc = []) {
+  return fetch(`${window.shareYourSteps.api_url}routes?page=${page}`, {
+    headers: { 'X-WP-Nonce': window.shareYourSteps.nonce }
+  })
+    .then(r => r.json())
+    .then(data => {
+      const routes = acc.concat(data.routes || []);
+      if (page < data.total_pages) {
+        return fetchAllRoutes(page + 1, routes);
+      }
+      return { routes, total: data.total, total_pages: data.total_pages };
+    });
+}
+
 function startPolling() {
   setInterval(() => {
-    fetch(window.shareYourSteps.api_url + 'routes', {
-      headers: { 'X-WP-Nonce': window.shareYourSteps.nonce }
-    })
-      .then(r => r.json())
+    fetchAllRoutes()
       .then(data => document.dispatchEvent(new CustomEvent('liveTick', { detail: data })))
       .catch(() => {});
     fetch(window.shareYourSteps.api_url + 'chat', {
