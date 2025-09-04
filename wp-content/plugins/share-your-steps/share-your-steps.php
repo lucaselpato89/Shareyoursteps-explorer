@@ -14,6 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
     wp_die( esc_html( __( 'No direct script access allowed.', 'share-your-steps' ) ) );
 }
 
+// Register default options on activation.
+if ( function_exists( 'register_activation_hook' ) ) {
+    register_activation_hook(
+        __FILE__,
+        function () {
+            add_option( 'sys_websocket_url', 'ws://localhost:8080' );
+        }
+    );
+}
+
 // Load plugin text domain.
 function sys_load_textdomain() {
     load_plugin_textdomain( 'share-your-steps', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
@@ -37,7 +47,7 @@ function sys_enqueue_assets() {
         array(
             'api_url' => esc_url_raw( rest_url( 'share-your-steps/v1/' ) ),
             // Configure the WebSocket endpoint (e.g. Pusher, Socket.io, Ratchet).
-            'websocket_url' => esc_url_raw( 'ws://localhost:8080' ),
+            'websocket_url' => esc_url_raw( get_option( 'sys_websocket_url', 'ws://localhost:8080' ) ),
         )
     );
 }
@@ -58,6 +68,61 @@ function sys_share_your_steps_shortcode( $atts = array() ) {
     return '<div id="' . esc_attr( $map_id ) . '" class="sys-map" data-lat="' . esc_attr( $atts['lat'] ) . '" data-lng="' . esc_attr( $atts['lng'] ) . '" data-zoom="' . esc_attr( $atts['zoom'] ) . '">' . esc_html( __( 'Loading map...', 'share-your-steps' ) ) . '</div>';
 }
 add_shortcode( 'share_your_steps', 'sys_share_your_steps_shortcode' );
+
+// Register admin settings page.
+add_action(
+    'admin_menu',
+    function () {
+        add_options_page(
+            __( 'Share Your Steps', 'share-your-steps' ),
+            __( 'Share Your Steps', 'share-your-steps' ),
+            'manage_options',
+            'sys-settings',
+            function () {
+                ?>
+                <div class="wrap">
+                    <h1><?php esc_html_e( 'Share Your Steps', 'share-your-steps' ); ?></h1>
+                    <form action="options.php" method="post">
+                        <?php
+                        settings_fields( 'sys_settings' );
+                        do_settings_sections( 'sys_settings' );
+                        submit_button();
+                        ?>
+                    </form>
+                </div>
+                <?php
+            }
+        );
+    }
+);
+
+add_action(
+    'admin_init',
+    function () {
+        register_setting(
+            'sys_settings',
+            'sys_websocket_url',
+            array(
+                'type'              => 'string',
+                'sanitize_callback' => 'esc_url_raw',
+                'default'           => 'ws://localhost:8080',
+            )
+        );
+
+        add_settings_section( 'sys_settings_section', __( 'General', 'share-your-steps' ), '__return_false', 'sys_settings' );
+
+        add_settings_field(
+            'sys_websocket_url',
+            __( 'WebSocket URL', 'share-your-steps' ),
+            function () {
+                $value = esc_url( get_option( 'sys_websocket_url', 'ws://localhost:8080' ) );
+                echo '<input type="text" name="sys_websocket_url" value="' . esc_attr( $value ) . '" class="regular-text" />';
+            },
+            'sys_settings',
+            'sys_settings_section'
+        );
+    }
+);
 
 // Force HTTPS for all front-end requests.
 function sys_force_https() {
