@@ -20,6 +20,7 @@ if ( function_exists( 'register_activation_hook' ) ) {
         __FILE__,
         function () {
             add_option( 'sys_websocket_url', 'ws://localhost:8080' );
+            add_option( 'sys_force_https', false );
         }
     );
 }
@@ -119,6 +120,16 @@ add_action(
             )
         );
 
+        register_setting(
+            'sys_settings',
+            'sys_force_https',
+            array(
+                'type'              => 'boolean',
+                'sanitize_callback' => 'rest_sanitize_boolean',
+                'default'           => false,
+            )
+        );
+
         add_settings_section( 'sys_settings_section', __( 'General', 'share-your-steps' ), '__return_false', 'sys_settings' );
 
         add_settings_field(
@@ -131,12 +142,27 @@ add_action(
             'sys_settings',
             'sys_settings_section'
         );
+
+        add_settings_field(
+            'sys_force_https',
+            __( 'Force HTTPS', 'share-your-steps' ),
+            function () {
+                $value = (bool) get_option( 'sys_force_https', false );
+                echo '<input type="checkbox" name="sys_force_https" value="1" ' . checked( $value, true, false ) . ' />';
+            },
+            'sys_settings',
+            'sys_settings_section'
+        );
     }
 );
 
 // Force HTTPS for all front-end requests.
 function sys_force_https() {
     if ( is_admin() || ! wp_is_https_supported() ) {
+        return;
+    }
+
+    if ( ! get_option( 'sys_force_https' ) || is_ssl() || 'https' === wp_parse_url( home_url(), PHP_URL_SCHEME ) ) {
         return;
     }
 
@@ -151,11 +177,9 @@ function sys_force_https() {
         return;
     }
 
-    if ( ! is_ssl() ) {
-        $location = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-        wp_safe_redirect( $location, 301 );
-        exit;
-    }
+    $location = 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    wp_safe_redirect( $location, 301 );
+    exit;
 }
 add_action( 'template_redirect', 'sys_force_https', 1 );
 

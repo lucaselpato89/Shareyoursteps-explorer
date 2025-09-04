@@ -24,3 +24,7 @@ msgstr ""
 #: wp-content/plugins/share-your-steps/share-your-steps.php:49
 msgid "Loading map..."
 msgstr ""
+
+#: wp-content/plugins/share-your-steps/share-your-steps.php:148
+msgid "Force HTTPS"
+msgstr ""
