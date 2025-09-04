@@ -26,6 +26,7 @@ I file `*.min.js` verranno generati nella cartella `wp-content/plugins/share-you
 
 ## Opzioni
 
+- Dalla pagina **Settings → Share Your Steps** è possibile configurare l'endpoint WebSocket. Il valore predefinito è `ws://localhost:8080`.
 - Il reindirizzamento automatico verso HTTPS può essere disabilitato aggiungendo il seguente filtro in un plugin o nel tema attivo:
 
 ```php
