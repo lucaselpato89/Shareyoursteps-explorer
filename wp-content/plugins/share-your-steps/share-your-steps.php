@@ -44,8 +44,9 @@ function sys_enqueue_assets() {
         plugins_url( 'assets/js/map.min.js', __FILE__ ),
         array( 'leaflet' ),
         '1.0.0',
-        array( 'in_footer' => true, 'type' => 'module' )
+        true
     );
+    wp_script_add_data( 'share-your-steps', 'type', 'module' );
     wp_enqueue_script( 'share-your-steps' );
     wp_localize_script(
         'share-your-steps',
