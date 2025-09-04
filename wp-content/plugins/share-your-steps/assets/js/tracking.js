@@ -1,0 +1,9 @@
+import { sendLiveTick } from './realtime.js';
+
+export default class Tracking {
+  init() {
+    console.log('Tracking initialized');
+    document.addEventListener('liveTick', e => console.log(e.detail));
+    sendLiveTick({ lat: 0, lng: 0 });
+  }
+}

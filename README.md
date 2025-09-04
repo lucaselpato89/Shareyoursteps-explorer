@@ -13,6 +13,17 @@ Plugin WordPress per visualizzare una mappa interattiva dei percorsi condivisi t
 - [Leaflet](https://leafletjs.com/) viene caricato dal plugin tramite CDN.
 - Il sito deve essere servito tramite **HTTPS** per evitare problemi di contenuti misti quando vengono caricate risorse esterne.
 
+## Build
+
+Per rigenerare i file JavaScript minificati eseguire:
+
+```bash
+npm install
+npm run build
+```
+
+I file `*.min.js` verranno generati nella cartella `wp-content/plugins/share-your-steps/assets/js`.
+
 ## Opzioni
 
 - Il reindirizzamento automatico verso HTTPS può essere disabilitato aggiungendo il seguente filtro in un plugin o nel tema attivo:

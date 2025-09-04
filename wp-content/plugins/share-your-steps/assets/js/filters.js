@@ -1,0 +1,5 @@
+export default class Filters {
+  init() {
+    console.log('Filters initialized');
+  }
+}
