@@ -2,9 +2,11 @@
   "name": "shareyoursteps-explorer",
   "version": "1.0.0",
   "devDependencies": {
-    "cypress": "^13.6.0"
+    "cypress": "^13.6.0",
+    "terser": "^5.24.0"
   },
   "scripts": {
-    "test:e2e": "cypress run"
+    "test:e2e": "cypress run",
+    "build": "node build.js"
   }
 }

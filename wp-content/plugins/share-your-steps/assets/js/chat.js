@@ -1,0 +1,9 @@
+import { sendChatTick } from './realtime.js';
+
+export default class Chat {
+  init() {
+    console.log('Chat initialized');
+    document.addEventListener('chatTick', e => console.log(e.detail));
+    sendChatTick({ message: 'Hello' });
+  }
+}
