@@ -62,6 +62,31 @@ class RestApiTest extends TestCase {
         $this->assertSame( 1, $data['routes'][0]['id'] );
         $this->assertSame( [ 'a' => 1 ], $data['routes'][0]['route'] );
         $this->assertSame( 3, $data['routes'][1]['id'] );
+        $this->assertSame( 3, $data['total'] );
+        $this->assertSame( 1, $data['total_pages'] );
+    }
+
+    public function test_sys_get_routes_honors_pagination() {
+        global $sys_wp_posts, $sys_post_meta;
+        $sys_wp_posts = [
+            1 => 'sys_route',
+            2 => 'sys_route',
+            3 => 'sys_route',
+        ];
+
+        foreach ( $sys_wp_posts as $id => $type ) {
+            $sys_post_meta[ $id ]['_sys_route_data'] = json_encode( [ 'id' => $id ] );
+        }
+
+        $request  = new WP_REST_Request( [ 'page' => 2, 'per_page' => 1 ] );
+        $response = sys_get_routes( $request );
+        $this->assertInstanceOf( WP_REST_Response::class, $response );
+        $data = $response->get_data();
+
+        $this->assertCount( 1, $data['routes'] );
+        $this->assertSame( 2, $data['routes'][0]['id'] );
+        $this->assertSame( 3, $data['total'] );
+        $this->assertSame( 3, $data['total_pages'] );
     }
 
     public function test_sys_get_chat_success() {

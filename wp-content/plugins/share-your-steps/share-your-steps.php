@@ -269,11 +269,15 @@ function sys_save_route( WP_REST_Request $request ) {
 
 // Retrieve stored routes.
 function sys_get_routes( WP_REST_Request $request ) {
+    $page     = max( 1, (int) $request->get_param( 'page' ) ?: 1 );
+    $per_page = max( 1, (int) $request->get_param( 'per_page' ) ?: 20 );
+
     $args = array(
         'post_type'      => 'sys_route',
         'post_status'    => 'publish',
         'author'         => get_current_user_id(),
-        'posts_per_page' => -1,
+        'posts_per_page' => $per_page,
+        'paged'          => $page,
         'fields'         => 'ids',
     );
 
@@ -295,7 +299,13 @@ function sys_get_routes( WP_REST_Request $request ) {
         }
     }
 
-    return rest_ensure_response( array( 'routes' => $routes ) );
+    return rest_ensure_response(
+        array(
+            'routes'      => $routes,
+            'total'       => (int) ( $query->found_posts ?? count( $routes ) ),
+            'total_pages' => (int) ( $query->max_num_pages ?? 1 ),
+        )
+    );
 }
 
 // Schedule event to store live coordinates.
