@@ -80,4 +80,23 @@ class RestApiTest extends TestCase {
         $this->assertTrue( is_wp_error( $result ) );
         $this->assertSame( 'sys_message_disallowed', $result->get_error_code() );
     }
+
+    public function test_rest_route_permissions() {
+        global $sys_registered_routes, $sys_current_user_cap;
+
+        $expected = [
+            'share-your-steps/v1/save-route'    => 'edit_posts',
+            'share-your-steps/v1/live-route'    => 'edit_posts',
+            'share-your-steps/v1/finalize-route'=> 'edit_posts',
+            'share-your-steps/v1/routes'        => 'read',
+            'share-your-steps/v1/chat'          => 'read',
+        ];
+
+        foreach ( $expected as $route => $cap ) {
+            $sys_current_user_cap = '';
+            $callback             = $sys_registered_routes[ $route ]['permission_callback'];
+            $this->assertTrue( $callback() );
+            $this->assertSame( $cap, $sys_current_user_cap );
+        }
+    }
 }

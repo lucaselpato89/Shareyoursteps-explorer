@@ -48,6 +48,7 @@ function sys_enqueue_assets() {
             'api_url' => esc_url_raw( rest_url( 'share-your-steps/v1/' ) ),
             // Configure the WebSocket endpoint (e.g. Pusher, Socket.io, Ratchet).
             'websocket_url' => esc_url_raw( get_option( 'sys_websocket_url', 'ws://localhost:8080' ) ),
+            'nonce' => wp_create_nonce( 'wp_rest' ),
         )
     );
 }
@@ -177,7 +178,7 @@ function sys_register_rest_routes() {
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => 'sys_save_route',
             'permission_callback' => function () {
-                return current_user_can( 'read' );
+                return current_user_can( 'edit_posts' );
             },
         )
     );
@@ -213,7 +214,7 @@ function sys_register_rest_routes() {
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => 'sys_save_live_route',
             'permission_callback' => function () {
-                return current_user_can( 'read' );
+                return current_user_can( 'edit_posts' );
             },
         )
     );
@@ -225,7 +226,7 @@ function sys_register_rest_routes() {
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => 'sys_finalize_route',
             'permission_callback' => function () {
-                return current_user_can( 'read' );
+                return current_user_can( 'edit_posts' );
             },
         )
     );
