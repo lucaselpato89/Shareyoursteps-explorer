@@ -12,3 +12,11 @@ Plugin WordPress per visualizzare una mappa interattiva dei percorsi condivisi t
 
 - [Leaflet](https://leafletjs.com/) viene caricato dal plugin tramite CDN.
 - Il sito deve essere servito tramite **HTTPS** per evitare problemi di contenuti misti quando vengono caricate risorse esterne.
+
+## Opzioni
+
+- Il reindirizzamento automatico verso HTTPS può essere disabilitato aggiungendo il seguente filtro in un plugin o nel tema attivo:
+
+```php
+add_filter( 'sys_force_https_enabled', '__return_false' );
+```
