@@ -3,11 +3,15 @@ let socket;
 
 function startPolling() {
   setInterval(() => {
-    fetch(window.shareYourSteps.api_url + 'routes')
+    fetch(window.shareYourSteps.api_url + 'routes', {
+      headers: { 'X-WP-Nonce': window.shareYourSteps.nonce }
+    })
       .then(r => r.json())
       .then(data => document.dispatchEvent(new CustomEvent('liveTick', { detail: data })))
       .catch(() => {});
-    fetch(window.shareYourSteps.api_url + 'chat')
+    fetch(window.shareYourSteps.api_url + 'chat', {
+      headers: { 'X-WP-Nonce': window.shareYourSteps.nonce }
+    })
       .then(r => r.json())
       .then(data => document.dispatchEvent(new CustomEvent('chatTick', { detail: data })))
       .catch(() => {});
@@ -39,7 +43,7 @@ export function sendLiveTick(payload) {
   } else {
     fetch(window.shareYourSteps.api_url + 'save-route', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.shareYourSteps.nonce },
       body: JSON.stringify(payload)
     }).catch(() => {});
   }
@@ -52,7 +56,7 @@ export function sendChatTick(payload) {
   } else {
     fetch(window.shareYourSteps.api_url + 'chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.shareYourSteps.nonce },
       body: JSON.stringify(payload)
     }).catch(() => {});
   }

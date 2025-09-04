@@ -108,7 +108,13 @@ function register_rest_route( $namespace, $route, $args ) {
     $sys_registered_routes[ $namespace . $route ] = $args;
 }
 
-function current_user_can( $cap ) { return true; }
+global $sys_current_user_cap;
+$sys_current_user_cap = '';
+function current_user_can( $cap ) {
+    global $sys_current_user_cap;
+    $sys_current_user_cap = $cap;
+    return true;
+}
 function sanitize_text_field( $str ) { return trim( $str ); }
 function wp_unslash( $value ) { return $value; }
 function wp_json_encode( $data ) { return json_encode( $data ); }
